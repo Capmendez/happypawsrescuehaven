@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { LogOut, LayoutDashboard, ClipboardList, FolderHeart, Building2, FileCheck, Truck, MapPin } from 'lucide-react';
+import { LogOut, LayoutDashboard, ClipboardList, FolderHeart, Building2, FileCheck, Truck, MapPin, Heart, HeartHandshake } from 'lucide-react';
 
 /**
 2. Admin Header / Navigation panel specifically for the Staff Portal.
@@ -22,9 +22,11 @@ export const AdminHeader: React.FC = () => {
   const navItems = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/admin/applications', label: 'Applications Queue', icon: ClipboardList },
+    { path: '/admin/foster-applications', label: 'Foster Queue', icon: HeartHandshake },
     { path: '/admin/pets', label: 'Pet Inventory', icon: FolderHeart },
     { path: '/admin/payment-methods', label: 'Payment Methods', icon: Building2 },
     { path: '/admin/payment-proofs', label: 'Payment Proofs', icon: FileCheck },
+    { path: '/admin/donations', label: 'Donations', icon: Heart },
     { path: '/admin/transport-updates', label: 'Transport Updates', icon: MapPin },
     { path: '/admin/transport-settings', label: 'Transport Settings', icon: Truck },
   ];

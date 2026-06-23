@@ -1,6 +1,6 @@
 // supabase/functions/send-approval-email/index.ts
 //
-// Sends adoption-related emails to adopters via Resend. Supports four
+// Sends adoption-related emails to adopters via Resend. Supports five
 // email types:
 // - 'application_approved': sent when staff approves an application,
 //   directs the adopter to the checkout page to submit adoption payment.
@@ -12,17 +12,20 @@
 //   submit the refundable security deposit.
 // - 'payment_confirmed': sent when staff approves the security deposit,
 //   confirms transport is finalized and shares the tracking ID.
+// - 'donation_confirmed': sent when staff confirms a donation proof,
+//   thanks the donor.
 //
 // Expects a POST body like:
 // {
-//   "type": "application_approved" | "adoption_finalized" | "deposit_requested" | "payment_confirmed",
-//   "adopterEmail": "jane@example.com",
-//   "adopterName": "Jane Doe",
-//   "petName": "Luna",
-//   "applicationId": "uuid-here",         // required for application_approved
-//   "adoptionId": "uuid-here",            // required for adoption_finalized
-//   "transportRequestId": "uuid-here",    // required for deposit_requested
-//   "trackingId": "HPRH-TRK-2026-0001"    // required for payment_confirmed
+//   "type": "application_approved" | "adoption_finalized" | "deposit_requested" | "payment_confirmed" | "donation_confirmed",
+//   "adopterEmail": "jane@example.com",     // for donation_confirmed, this is the DONOR's email
+//   "adopterName": "Jane Doe",              // for donation_confirmed, this is the DONOR's name
+//   "petName": "Luna",                      // NOT required for donation_confirmed
+//   "applicationId": "uuid-here",           // required for application_approved
+//   "adoptionId": "uuid-here",              // required for adoption_finalized
+//   "transportRequestId": "uuid-here",      // required for deposit_requested
+//   "trackingId": "HPRH-TRK-2026-0001",     // required for payment_confirmed
+//   "donationAmount": "50.00"               // required for donation_confirmed
 // }
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -48,11 +51,12 @@ serve(async (req) => {
 
     const body = await req.json();
     const type = body.type ?? "application_approved"; // default for backward compatibility
-    const { adopterEmail, adopterName, petName, applicationId, adoptionId, transportRequestId, trackingId } = body;
+    const { adopterEmail, adopterName, petName, applicationId, adoptionId, transportRequestId, trackingId, donationAmount, assignmentId } = body;
 
-    if (!adopterEmail || !adopterName || !petName) {
+    // petName is NOT required for donation_confirmed (donations aren't pet-specific)
+    if (!adopterEmail || !adopterName || (type !== "donation_confirmed" && !petName)) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: adopterEmail, adopterName, petName" }),
+        JSON.stringify({ error: "Missing required fields: adopterEmail, adopterName, and petName (except for donation_confirmed)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -61,7 +65,130 @@ serve(async (req) => {
     let emailHtml: string;
     let fromAddress = "Happy Paws Rescue Haven <adoptions@happypawsrescuehaven.com>";
 
-    if (type === "payment_confirmed") {
+    if (type === "donation_confirmed") {
+      if (!donationAmount) {
+        return new Response(
+          JSON.stringify({ error: "Missing required field for donation_confirmed: donationAmount" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      fromAddress = "Happy Paws Rescue Haven <donations@happypawsrescuehaven.com>";
+      subject = `Thank you for your generous donation! 🐾`;
+      emailHtml = `
+        <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 32px; background-color: #FBF7EE; color: #1F2A1E;">
+          <h1 style="font-size: 24px; margin-bottom: 8px;">Thank you, ${adopterName}!</h1>
+          <p style="font-size: 16px; line-height: 1.6;">
+            Your donation of <strong>$${donationAmount}</strong> has been confirmed. Gifts like
+            yours directly support the animals in our care — from medical treatment to foster
+            supplies to safe transport home.
+          </p>
+          <p style="font-size: 16px; line-height: 1.6;">
+            On behalf of every paw we help, thank you for being part of this mission.
+          </p>
+          <p style="font-size: 14px; color: #5C7A5E; margin-top: 32px;">
+            If you have any questions about your donation, just reply to this email.
+          </p>
+          <p style="font-size: 14px; color: #5C7A5E; margin-top: 24px;">
+            Warmly,<br/>
+            Happy Paws Rescue Haven
+          </p>
+        </div>
+      `;
+    } else if (type === "foster_assignment_notice") {
+      if (!assignmentId) {
+        return new Response(
+          JSON.stringify({ error: "Missing required field for foster_assignment_notice: assignmentId" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      fromAddress = "Happy Paws Rescue Haven <adoptions@happypawsrescuehaven.com>";
+      const locationPortalUrl = `${SITE_URL}/foster/location/${assignmentId}`;
+      subject = `Foster Assignment: Coordinate transit for ${petName}! 🐾`;
+      emailHtml = `
+        <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 32px; background-color: #FBF7EE; color: #1F2A1E;">
+          <h1 style="font-size: 24px; margin-bottom: 8px;">Hello, ${adopterName}!</h1>
+          <p style="font-size: 16px; line-height: 1.6;">
+            Exciting news! We have assigned <strong>${petName}</strong> to you for fostering.
+            Please access our logistics coordination gateway to enter your address, verify distance fees, and finalize pickup or transit settings.
+          </p>
+          <a href="${locationPortalUrl}" style="display: inline-block; background-color: #5C7A5E; color: #FBF7EE; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 16px;">
+            Coordinate Foster Transit
+          </a>
+          <p style="font-size: 14px; color: #5C7A5E; margin-top: 32px;">
+            Please note: Fosters inside Michigan have their security deposits waived entirely. Out-of-state fosters will be prompted to submit a refundable deposit.
+          </p>
+          <p style="font-size: 14px; color: #5C7A5E; margin-top: 24px;">
+            Warmly,<br/>
+            Happy Paws Rescue Haven
+          </p>
+        </div>
+      `;
+    } else if (type === "foster_deposit_requested") {
+      if (!assignmentId) {
+        return new Response(
+          JSON.stringify({ error: "Missing required field for foster_deposit_requested: assignmentId" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      fromAddress = "Happy Paws Rescue Haven Transport <transport@happypawsrescuehaven.com>";
+      const locationPortalUrl = `${SITE_URL}/foster/location/${assignmentId}`;
+      subject = `Security Deposit Request for ${petName}'s Foster Transit`;
+      emailHtml = `
+        <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 32px; background-color: #FBF7EE; color: #1F2A1E;">
+          <h1 style="font-size: 24px; margin-bottom: 8px;">Action required, ${adopterName}!</h1>
+          <p style="font-size: 16px; line-height: 1.6;">
+            We've confirmed your transport fee payment for <strong>${petName}</strong>.
+            The final step to active transit tracking is submitting the refundable security deposit.
+          </p>
+          <a href="${locationPortalUrl}" style="display: inline-block; background-color: #C75D3A; color: #FBF7EE; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 16px;">
+            Submit Security Deposit
+          </a>
+          <p style="font-size: 14px; color: #5C7A5E; margin-top: 32px;">
+            This deposit is fully refundable upon the safe return or adoption finalization of the animal.
+          </p>
+          <p style="font-size: 14px; color: #5C7A5E; margin-top: 24px;">
+            Warmly,<br/>
+            Happy Paws Rescue Haven
+          </p>
+        </div>
+      `;
+    } else if (type === "foster_payment_confirmed") {
+      if (!trackingId) {
+        return new Response(
+          JSON.stringify({ error: "Missing required field for foster_payment_confirmed: trackingId" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      fromAddress = "Happy Paws Rescue Haven Transport <transport@happypawsrescuehaven.com>";
+      subject = `${petName}'s Foster Transport is Finalized! 🚗`;
+      emailHtml = `
+        <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 32px; background-color: #FBF7EE; color: #1F2A1E;">
+          <h1 style="font-size: 24px; margin-bottom: 8px;">All set, ${adopterName}!</h1>
+          <p style="font-size: 16px; line-height: 1.6;">
+            We have verified your logistics coordinates and payments. <strong>${petName}</strong> is officially queued for transit.
+          </p>
+          <div style="background-color: #F0EADC; border: 1px solid #5C7A5E; border-radius: 6px; padding: 20px; margin: 24px 0; text-align: center;">
+            <p style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #5C7A5E; margin: 0 0 8px;">
+              Your Foster Transport Tracking ID
+            </p>
+            <p style="font-size: 22px; font-family: 'Courier New', monospace; font-weight: bold; color: #C75D3A; margin: 0;">
+              ${trackingId}
+            </p>
+          </div>
+          <p style="font-size: 16px; line-height: 1.6;">
+            You can use this tracking ID on our public portal to watch the real-time transit status updates.
+          </p>
+          <p style="font-size: 14px; color: #5C7A5E; margin-top: 24px;">
+            Warmly,<br/>
+            Happy Paws Rescue Haven
+          </p>
+        </div>
+      `;
+    } else if (type === "payment_confirmed") {
       if (!trackingId) {
         return new Response(
           JSON.stringify({ error: "Missing required field for payment_confirmed: trackingId" }),

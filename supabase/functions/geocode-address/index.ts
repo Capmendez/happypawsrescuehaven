@@ -85,11 +85,14 @@ serve(async (req) => {
       );
     }
 
+    const stateCode = firstResult.address_components?.state || null;
+
     return new Response(
       JSON.stringify({
         latitude: lat,
         longitude: lng,
         formattedAddress,
+        state: stateCode,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

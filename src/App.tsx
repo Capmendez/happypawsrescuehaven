@@ -16,6 +16,7 @@ import Donate from './pages/public/Donate';
 import Events from './pages/public/Events';
 import Resources from './pages/public/Resources';
 import Contact from './pages/public/Contact';
+import FosterLocation from './pages/public/FosterLocation';
 
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -26,9 +27,11 @@ import AdminApplications from './pages/admin/AdminApplications';
 import AdminLayout from './components/layout/AdminLayout';
 import AdminPaymentMethods from './pages/admin/AdminPaymentMethods';
 import AdminPaymentProofs from './pages/admin/AdminPaymentProofs';
+import AdminDonations from './pages/admin/AdminDonations';
 import AdminTransportSettings from './pages/admin/AdminTransportSettings';
 import AdminTransportUpdates from './pages/admin/AdminTransportUpdates';
 import TransportRequestPage from './pages/public/TransportRequestPage';
+import AdminFosterApplications from './pages/admin/AdminFosterApplications';
 
 function App() {
   return (
@@ -46,6 +49,7 @@ function App() {
           <Route path="/transport/request/:adoptionId" element={<TransportRequestPage />} />
           <Route path="/about" element={<About />} />
           <Route path="/volunteer" element={<Volunteer />} />
+          <Route path="/foster/location/:assignmentId" element={<FosterLocation />} />
           <Route path="/donate" element={<Donate />} />
           <Route path="/events" element={<Events />} />
           <Route path="/resources" element={<Resources />} />
@@ -126,6 +130,16 @@ function App() {
             }
           />
           <Route
+            path="/admin/donations"
+            element={
+              <RequireStaff>
+                <AdminLayout>
+                  <AdminDonations />
+                </AdminLayout>
+              </RequireStaff>
+            }
+          />
+          <Route
             path="/admin/transport-settings"
             element={
               <RequireStaff>
@@ -141,6 +155,16 @@ function App() {
               <RequireStaff>
                 <AdminLayout>
                   <AdminTransportUpdates />
+                </AdminLayout>
+              </RequireStaff>
+            }
+          />
+          <Route
+            path="/admin/foster-applications"
+            element={
+              <RequireStaff>
+                <AdminLayout>
+                  <AdminFosterApplications />
                 </AdminLayout>
               </RequireStaff>
             }

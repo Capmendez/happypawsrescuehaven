@@ -27,6 +27,12 @@ export const AdminPaymentMethods: React.FC = () => {
   const [securityDepositAmount, setSecurityDepositAmount] = useState('100.00');
   const [updatingSettings, setUpdatingSettings] = useState(false);
 
+  // Public Contact Info Settings State
+  const [contactPhone, setContactPhone] = useState('+1 (XXX) XXX-XXXX');
+  const [contactEmail, setContactEmail] = useState('support@happypawsrescuehaven.com');
+  const [contactAddress, setContactAddress] = useState('Grand Rapids, MI 49503');
+  const [updatingContactSettings, setUpdatingContactSettings] = useState(false);
+
   // Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -75,16 +81,25 @@ export const AdminPaymentMethods: React.FC = () => {
       if (dbError) throw dbError;
       setMethods(methodsData || []);
 
-      // 2. Fetch security deposit settings
+      // 2. Fetch application settings
       const { data: settingsData, error: settingsError } = await supabase
         .from('app_settings')
         .select('*')
-        .eq('key', 'security_deposit_amount')
-        .maybeSingle();
+        .in('key', [
+          'security_deposit_amount',
+          'contact_phone',
+          'contact_email',
+          'contact_address'
+        ]);
 
       if (settingsError) throw settingsError;
       if (settingsData) {
-        setSecurityDepositAmount(settingsData.value);
+        settingsData.forEach((row: any) => {
+          if (row.key === 'security_deposit_amount') setSecurityDepositAmount(row.value);
+          if (row.key === 'contact_phone') setContactPhone(row.value);
+          if (row.key === 'contact_email') setContactEmail(row.value);
+          if (row.key === 'contact_address') setContactAddress(row.value);
+        });
       }
     } catch (err: any) {
       console.error('Error fetching payment methods data:', err);
@@ -425,6 +440,43 @@ export const AdminPaymentMethods: React.FC = () => {
     }
   };
 
+  const handleUpdateContactSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactPhone.trim() || !contactEmail.trim() || !contactAddress.trim()) {
+      setNotification({
+        message: 'Please fill in all contact information fields.',
+        type: 'error'
+      });
+      return;
+    }
+
+    try {
+      setUpdatingContactSettings(true);
+      const { error: settingsError } = await supabase
+        .from('app_settings')
+        .upsert([
+          { key: 'contact_phone', value: contactPhone.trim() },
+          { key: 'contact_email', value: contactEmail.trim() },
+          { key: 'contact_address', value: contactAddress.trim() }
+        ]);
+
+      if (settingsError) throw settingsError;
+
+      setNotification({
+        message: 'Public Contact Information updated successfully.',
+        type: 'success'
+      });
+    } catch (err: any) {
+      console.error('Error updating contact settings:', err);
+      setNotification({
+        message: `Failed to update contact settings: ${err.message}`,
+        type: 'error'
+      });
+    } finally {
+      setUpdatingContactSettings(false);
+    }
+  };
+
   if (loading && methods.length === 0) {
     return (
       <div className="py-20 bg-hprh-paper min-h-[60vh] flex items-center justify-center">
@@ -633,6 +685,58 @@ export const AdminPaymentMethods: React.FC = () => {
           
           <p className="text-[10px] text-hprh-pine/45 italic">
             * This deposit setting determines the flat-rate security deposit adopter invoices created automatically upon approving transportation fees.
+          </p>
+        </div>
+
+        {/* Setting Panel: Public Contact Information Settings */}
+        <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded-lg p-6 space-y-4 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-hprh-clay"></div>
+          <div className="flex items-center gap-2 border-b border-hprh-pine/10 pb-3">
+            <Settings className="w-5 h-5 text-hprh-clay" />
+            <h2 className="font-display text-lg font-bold text-hprh-pine">
+              Public Contact Information
+            </h2>
+          </div>
+          
+          <form onSubmit={handleUpdateContactSettings} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                label="Contact Phone Number *"
+                type="text"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="e.g. +1 (555) 019-2834"
+                required
+              />
+              <Input
+                label="Contact Email Address *"
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="e.g. support@happypawsrescuehaven.com"
+                required
+              />
+              <Input
+                label="Rescue Address/Location *"
+                type="text"
+                value={contactAddress}
+                onChange={(e) => setContactAddress(e.target.value)}
+                placeholder="e.g. Grand Rapids, MI 49503"
+                required
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={updatingContactSettings}
+              className="bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 text-xs font-mono font-bold uppercase tracking-wider py-3.5 px-6 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow"
+            >
+              {updatingContactSettings ? 'Updating...' : 'Save Contact Settings'}
+            </button>
+          </form>
+          
+          <p className="text-[10px] text-hprh-pine/45 italic">
+            * This contact information is displayed publicly on the contact page. Updating these settings will update the public website contact coordinates immediately.
           </p>
         </div>
 

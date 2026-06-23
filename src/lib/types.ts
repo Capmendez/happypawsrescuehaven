@@ -2,8 +2,53 @@
 // HAPPY PAWS RESCUE HAVEN TYPESCRIPT TYPE DEFINITIONS
 // ========================================================
 
-export type PetStatus = 'AVAILABLE' | 'PENDING' | 'ADOPTED' | 'MEDICAL_HOLD' | 'NOT_LISTED';
+export type PetStatus = 'AVAILABLE' | 'PENDING' | 'ADOPTED' | 'MEDICAL_HOLD' | 'NOT_LISTED' | 'IN_FOSTER';
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type ApplicantRole = 'FOSTER' | 'VOLUNTEER' | 'BOTH';
+export type FosterVolunteerStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+
+export interface FosterVolunteerApplication {
+  id: string;
+  user_id: string | null;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  role_interest: ApplicantRole;
+  experience_details: string | null;
+  availability: string | null;
+  has_other_pets: boolean | null;
+  housing_type: string | null;
+  id_document_url: string | null;
+  age_confirmed: boolean;
+  status: FosterVolunteerStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+}
+
+export type FosterAssignmentStatus = 'ASSIGNED' | 'TRANSPORT_NEEDED' | 'SELF_PICKUP' | 'ACTIVE' | 'RETURNED';
+
+export interface FosterAssignment {
+  id: string;
+  application_id: string;
+  pet_id: string;
+  status: FosterAssignmentStatus;
+  assigned_by: string | null;
+  assigned_at: string | null;
+  returned_at: string | null;
+  notes: string | null;
+  foster_address: string | null;
+  foster_state: string | null;
+  deposit_required: boolean | null;
+  deposit_terms_agreed: boolean;
+  deposit_terms_agreed_at: string | null;
+  // Joined fields
+  pets?: Pet;
+  foster_volunteer_applications?: FosterVolunteerApplication;
+}
 export type TransportStatus = 
   | 'AWAITING_CHOICE'
   | 'SELF_PICKUP_CONFIRMED'
@@ -107,7 +152,8 @@ export interface Adoption {
 
 export interface TransportRequest {
   id: string;
-  adoption_id: string;
+  adoption_id: string | null;
+  foster_assignment_id: string | null;
   pet_id: string | null;
   adopter_id: string | null;
   status: TransportStatus;
@@ -130,6 +176,7 @@ export interface TransportRequest {
   // Joined fields
   pets?: Pet;
   adopters?: Adopter;
+  foster_assignments?: FosterAssignment;
 }
 
 export type SecurityDepositStatus = 'PENDING' | 'PAID' | 'REFUNDED' | 'FORFEITED';
@@ -240,5 +287,21 @@ export interface ShipmentStatusUpdate {
   created_at: string;
   // Joined fields
   staff?: Staff;
+}
+
+export interface Donation {
+  id: string;
+  donor_name: string;
+  donor_email: string;
+  amount: number;
+  currency: string;
+  message: string | null;
+  bank_account_id: string | null;
+  proof_image_url: string | null;
+  status: 'PENDING_REVIEW' | 'CONFIRMED' | 'REJECTED';
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  bank_accounts?: BankAccount;
 }
 

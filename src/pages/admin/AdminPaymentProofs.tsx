@@ -223,69 +223,145 @@ export const AdminPaymentProofs: React.FC = () => {
 
         if (updateReq1) throw updateReq1;
 
-        // 2. Fetch deposit setting
-        const { data: settingsData } = await supabase
-          .from('app_settings')
-          .select('value')
-          .eq('key', 'security_deposit_amount')
-          .maybeSingle();
-        const depositAmount = parseFloat(settingsData?.value || '100.00');
+        // Check if there is a foster assignment associated
+        const fosterAssignmentId = proof.transport_requests?.foster_assignment_id;
+        let depositRequired = true;
+        let applicantEmail = proof.adopters?.email;
+        let applicantName = proof.adopters?.full_name;
 
-        // 3. Create security_deposits row
-        const { data: depositObj, error: depositErr } = await supabase
-          .from('security_deposits')
-          .insert([{
-            transport_request_id: proof.transport_request_id,
-            amount: depositAmount,
-            currency: 'USD',
-            status: 'PENDING'
-          }])
-          .select()
-          .single();
-
-        if (depositErr) throw depositErr;
-
-        // 4. Update transport request
-        const { error: updateReq2 } = await supabase
-          .from('transport_requests')
-          .update({
-            status: 'DEPOSIT_PENDING',
-            security_deposit_id: depositObj.id
-          })
-          .eq('id', proof.transport_request_id);
-
-        if (updateReq2) throw updateReq2;
-
-        // 5. Send Email
-        try {
-          const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
-            body: {
-              type: 'deposit_requested',
-              adopterEmail: proof.adopters?.email,
-              adopterName: proof.adopters?.full_name,
-              petName: proof.pets?.name,
-              transportRequestId: proof.transport_request_id
+        if (fosterAssignmentId) {
+          const { data: faData } = await supabase
+            .from('foster_assignments')
+            .select('deposit_required, foster_volunteer_applications(email, full_name)')
+            .eq('id', fosterAssignmentId)
+            .maybeSingle();
+          if (faData) {
+            depositRequired = faData.deposit_required !== false;
+            if (faData.foster_volunteer_applications) {
+              const fva = faData.foster_volunteer_applications as any;
+              applicantEmail = fva.email;
+              applicantName = fva.full_name;
             }
-          });
+          }
+        }
 
-          if (emailError) {
-            console.error('Failed to trigger email:', emailError);
-            setNotification({
-              message: `Transport fee approved. Security deposit requested. Note: Email notification failed to send.`,
-              type: 'warning'
+        if (!depositRequired) {
+          // Michigan foster: Bypass security deposit entirely
+          const trackingId = await generateTrackingId();
+
+          const { error: updateRequestErr } = await supabase
+            .from('transport_requests')
+            .update({
+              tracking_id: trackingId,
+              tracking_activated_at: new Date().toISOString(),
+              status: 'TRACKING_ACTIVE'
+            })
+            .eq('id', proof.transport_request_id);
+
+          if (updateRequestErr) throw updateRequestErr;
+
+          // Trigger email: foster_payment_confirmed
+          try {
+            const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
+              body: {
+                type: 'foster_payment_confirmed',
+                adopterEmail: applicantEmail,
+                adopterName: applicantName,
+                petName: proof.pets?.name,
+                trackingId: trackingId
+              }
             });
-          } else {
+
+            if (emailError) {
+              console.error('Failed to trigger email:', emailError);
+              setNotification({
+                message: `Transport fee approved. MI Deposit waived. Tracking ID: ${trackingId} activated. Note: Email notification failed to send.`,
+                type: 'warning'
+              });
+            } else {
+              setNotification({
+                message: `Transport fee approved. MI Deposit waived. Tracking ID: ${trackingId} activated and email sent.`,
+                type: 'success'
+              });
+            }
+          } catch (emailErr) {
+            console.error('Email trigger error:', emailErr);
             setNotification({
-              message: `Transport fee approved. Security deposit requested and notification email sent.`,
+              message: `Transport fee approved. MI Deposit waived. Tracking ID: ${trackingId} activated.`,
               type: 'success'
             });
           }
-        } catch (emailErr) {
-          console.error('Email trigger error:', emailErr);
-          setNotification({
-            message: `Transport fee approved. Security deposit requested.`,
-            type: 'success'
-          });
+        } else {
+          // 2. Fetch deposit setting
+          const { data: settingsData } = await supabase
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'security_deposit_amount')
+            .maybeSingle();
+          const depositAmount = parseFloat(settingsData?.value || '100.00');
+
+          // 3. Create security_deposits row
+          const { data: depositObj, error: depositErr } = await supabase
+            .from('security_deposits')
+            .insert([{
+              transport_request_id: proof.transport_request_id,
+              amount: depositAmount,
+              currency: 'USD',
+              status: 'PENDING'
+            }])
+            .select()
+            .single();
+
+          if (depositErr) throw depositErr;
+
+          // 4. Update transport request
+          const { error: updateReq2 } = await supabase
+            .from('transport_requests')
+            .update({
+              status: 'DEPOSIT_PENDING',
+              security_deposit_id: depositObj.id
+            })
+            .eq('id', proof.transport_request_id);
+
+          if (updateReq2) throw updateReq2;
+
+          // 5. Send Email
+          try {
+            const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
+              body: fosterAssignmentId ? {
+                type: 'foster_deposit_requested',
+                adopterEmail: applicantEmail,
+                adopterName: applicantName,
+                petName: proof.pets?.name,
+                assignmentId: fosterAssignmentId
+              } : {
+                type: 'deposit_requested',
+                adopterEmail: applicantEmail,
+                adopterName: applicantName,
+                petName: proof.pets?.name,
+                transportRequestId: proof.transport_request_id
+              }
+            });
+
+            if (emailError) {
+              console.error('Failed to trigger email:', emailError);
+              setNotification({
+                message: `Transport fee approved. Security deposit requested. Note: Email notification failed to send.`,
+                type: 'warning'
+              });
+            } else {
+              setNotification({
+                message: `Transport fee approved. Security deposit requested and notification email sent.`,
+                type: 'success'
+              });
+            }
+          } catch (emailErr) {
+            console.error('Email trigger error:', emailErr);
+            setNotification({
+              message: `Transport fee approved. Security deposit requested.`,
+              type: 'success'
+            });
+          }
         }
 
       } else if (purpose === 'SECURITY_DEPOSIT') {
@@ -315,13 +391,31 @@ export const AdminPaymentProofs: React.FC = () => {
 
         if (updateRequestErr) throw updateRequestErr;
 
+        // Check if there is a foster assignment associated
+        const fosterAssignmentId = proof.transport_requests?.foster_assignment_id;
+        let applicantEmail = proof.adopters?.email;
+        let applicantName = proof.adopters?.full_name;
+
+        if (fosterAssignmentId) {
+          const { data: faData } = await supabase
+            .from('foster_assignments')
+            .select('foster_volunteer_applications(email, full_name)')
+            .eq('id', fosterAssignmentId)
+            .maybeSingle();
+          if (faData?.foster_volunteer_applications) {
+            const fva = faData.foster_volunteer_applications as any;
+            applicantEmail = fva.email;
+            applicantName = fva.full_name;
+          }
+        }
+
         // 4. Trigger payment_confirmed email with tracking ID
         try {
           const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
             body: {
-              type: 'payment_confirmed',
-              adopterEmail: proof.adopters?.email,
-              adopterName: proof.adopters?.full_name,
+              type: fosterAssignmentId ? 'foster_payment_confirmed' : 'payment_confirmed',
+              adopterEmail: applicantEmail,
+              adopterName: applicantName,
               petName: proof.pets?.name,
               trackingId: trackingId
             }
