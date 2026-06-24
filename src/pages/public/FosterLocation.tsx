@@ -5,8 +5,6 @@ import Container from '../../components/ui/Container';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import { 
-  MapPin, 
-  Coins, 
   FileText, 
   Check, 
   Copy, 
@@ -14,14 +12,13 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Clock, 
-  ShieldCheck,
   Upload,
   User,
   Truck,
   Heart,
   FileSignature
 } from 'lucide-react';
-import type { Pet, FosterAssignment, TransportRequest, BankAccount, PaymentProof } from '../../lib/types';
+import type { TransportRequest, BankAccount } from '../../lib/types';
 
 // Haversine Distance Formula
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -46,7 +43,7 @@ export const FosterLocation: React.FC = () => {
   const [assignment, setAssignment] = useState<any>(null);
   const [pet, setPet] = useState<any>(null);
   const [transportRequest, setTransportRequest] = useState<TransportRequest | null>(null);
-  const [paymentProofs, setPaymentProofs] = useState<PaymentProof[]>([]);
+  // paymentProofs state removed as unused
   const [paymentMethods, setPaymentMethods] = useState<BankAccount[]>([]);
   const [selectedMethodId, setSelectedMethodId] = useState<string>('');
 
@@ -105,7 +102,7 @@ export const FosterLocation: React.FC = () => {
       setAssignment(detailsData.assignment);
       setPet(detailsData.pet);
       setTransportRequest(detailsData.transport_request);
-      setPaymentProofs(detailsData.payment_proofs || []);
+      // paymentProofs not used on public foster location page
 
       if (detailsData.assignment.foster_address) {
         setAddressInput(detailsData.assignment.foster_address);
@@ -431,26 +428,21 @@ export const FosterLocation: React.FC = () => {
   const status = transportRequest?.status || 'AWAITING_CHOICE';
 
   // Determine current active step
-  let activeStep = 0;
+  let activeStep = 1;
   if (assignment.status === 'SELF_PICKUP') {
     activeStep = 0;
   } else if (status === 'AWAITING_LOCATION' || status === 'AWAITING_CHOICE') {
     activeStep = 1;
-  } else if (status === 'QUOTE_GENERATED') {
-    activeStep = 2;
-  } else if (status === 'TRANSPORT_FEE_PENDING') {
-    activeStep = 2;
-  } else if (status === 'TRANSPORT_FEE_PAID' || status === 'DEPOSIT_PENDING') {
-    if (assignment.deposit_required === false) {
-      // MI foster skips deposit
+  } else if (status === 'DEPOSIT_PENDING') {
+    if (assignment.deposit_terms_agreed === false) {
       activeStep = 2;
     } else {
       activeStep = 3;
     }
   } else if (status === 'DEPOSIT_PROOF_SUBMITTED') {
-    activeStep = 4;
+    activeStep = 3;
   } else if (status === 'DEPOSIT_PAID' || status === 'TRACKING_ACTIVE' || status === 'DELIVERED' || status === 'CANCELLED') {
-    activeStep = 5;
+    activeStep = 4;
   }
 
   return (
@@ -485,22 +477,19 @@ export const FosterLocation: React.FC = () => {
         </div>
 
         {/* Stepper Indicator */}
-        {assignment.status !== 'SELF_PICKUP' && (
-          <div className="grid grid-cols-5 gap-2 text-center text-[10px] font-mono font-bold uppercase tracking-wider text-hprh-clay select-none">
+        {assignment.status !== 'SELF_PICKUP' && assignment.deposit_required !== false && (
+          <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-mono font-bold uppercase tracking-wider text-hprh-clay select-none">
             <div className={`pb-2 border-b-2 transition-colors ${activeStep >= 1 ? 'border-hprh-sage text-hprh-pine' : 'border-hprh-sage/10'}`}>
               1. Location
             </div>
             <div className={`pb-2 border-b-2 transition-colors ${activeStep >= 2 ? 'border-hprh-sage text-hprh-pine' : 'border-hprh-sage/10'}`}>
-              2. Transit Fee
+              2. Terms Gate
             </div>
             <div className={`pb-2 border-b-2 transition-colors ${activeStep >= 3 ? 'border-hprh-sage text-hprh-pine' : 'border-hprh-sage/10'}`}>
-              3. Terms Gate
+              3. Deposit
             </div>
             <div className={`pb-2 border-b-2 transition-colors ${activeStep >= 4 ? 'border-hprh-sage text-hprh-pine' : 'border-hprh-sage/10'}`}>
-              4. Deposit
-            </div>
-            <div className={`pb-2 border-b-2 transition-colors ${activeStep >= 5 ? 'border-hprh-sage text-hprh-pine' : 'border-hprh-sage/10'}`}>
-              5. Tracking
+              4. Tracking
             </div>
           </div>
         )}
@@ -604,10 +593,10 @@ export const FosterLocation: React.FC = () => {
                   </div>
                 </form>
 
-                {/* Display Quote Details */}
+                {/* Display Route Details */}
                 {distance !== null && calculatedQuote && geocodeState && (
                   <div className="bg-hprh-paper/50 border border-hprh-sage/20 rounded-xl p-5 space-y-4 animate-fade-in">
-                    <h4 className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold">Transit Quote Generated</h4>
+                    <h4 className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold">Transit Route Details</h4>
                     
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs font-mono">
                       <div>
@@ -619,18 +608,14 @@ export const FosterLocation: React.FC = () => {
                         <span className="text-hprh-pine font-bold">{distance.toFixed(1)} miles</span>
                       </div>
                       <div>
-                        <span className="text-hprh-clay block uppercase">Waiver Evaluation</span>
+                        <span className="text-hprh-clay block uppercase">Security Deposit</span>
                         <span className={`font-bold uppercase ${!calculatedQuote.depositRequired ? 'text-green-600' : 'text-amber-600'}`}>
-                          {!calculatedQuote.depositRequired ? 'MI Waiver Active' : 'Out-of-State'}
+                          {!calculatedQuote.depositRequired ? 'Waived (MI Resident)' : '$100.00 Refundable'}
                         </span>
                       </div>
                     </div>
 
-                    <div className="border-t border-hprh-sage/10 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div>
-                        <span className="text-xs text-hprh-clay block">Calculated Transport Fee</span>
-                        <span className="text-2xl font-bold font-display text-hprh-pine">${calculatedQuote.fee.toFixed(2)} {calculatedQuote.currency}</span>
-                      </div>
+                    <div className="border-t border-hprh-sage/10 pt-4 flex justify-end">
                       <Button onClick={handleConfirmQuote} variant="primary" disabled={submitting} className="w-full sm:w-auto">
                         Confirm Route & Save
                       </Button>
@@ -640,168 +625,8 @@ export const FosterLocation: React.FC = () => {
               </div>
             )}
 
-            {/* STEP 2: Transport Fee Payment Proof Upload */}
-            {activeStep === 2 && (
-              <div className="space-y-6 animate-fade-in">
-                {status === 'TRANSPORT_FEE_PENDING' ? (
-                  <div className="text-center py-8 space-y-4">
-                    <Clock className="w-12 h-12 text-hprh-sage mx-auto animate-pulse" />
-                    <h3 className="text-xl font-bold text-hprh-pine">Receipt Under Review</h3>
-                    <p className="text-sm text-hprh-clay max-w-sm mx-auto">
-                      Thank you! You have submitted your transport fee receipt. Our administration team is verifying the transaction details.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-bold text-hprh-pine">Submit Transport Fee Receipt</h3>
-                      <p className="text-xs text-hprh-clay">
-                        Your calculated transport fee is <strong>${transportRequest?.transport_fee_amount?.toFixed(2)} USD</strong>. Please transfer the funds using one of our verified banking portals and upload a screenshot of your receipt.
-                      </p>
-                    </div>
-
-                    {/* Payment methods list */}
-                    <div className="space-y-4">
-                      <label className="block text-xs font-mono uppercase tracking-widest text-hprh-clay font-bold">Select Payment Portal</label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {paymentMethods.map(method => (
-                          <div 
-                            key={method.id}
-                            onClick={() => setSelectedMethodId(method.id)}
-                            className={`border rounded-xl p-4 cursor-pointer transition-all ${
-                              selectedMethodId === method.id 
-                                ? 'border-hprh-sage bg-hprh-sage/5 shadow-sm font-semibold' 
-                                : 'border-hprh-sage/10 hover:border-hprh-sage/30'
-                            }`}
-                          >
-                            <span className="text-xs font-mono block uppercase text-hprh-clay">{method.method_type.replace(/_/g, ' ')}</span>
-                            <span className="text-sm text-hprh-pine">{method.bank_name || method.display_label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Selected Method Details */}
-                    {selectedMethod && (
-                      <div className="bg-hprh-paper/50 border border-hprh-sage/20 rounded-xl p-4 space-y-3 text-xs font-mono">
-                        <div className="flex justify-between items-center border-b border-hprh-sage/10 pb-2">
-                          <span className="text-hprh-clay">PORTAL TYPE</span>
-                          <span className="font-bold text-hprh-pine uppercase">{selectedMethod.method_type}</span>
-                        </div>
-                        {selectedMethod.account_name && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-hprh-clay">ACCOUNT NAME</span>
-                            <span className="font-bold text-hprh-pine">{selectedMethod.account_name}</span>
-                          </div>
-                        )}
-                        {selectedMethod.account_number && (
-                          <div className="flex justify-between items-center gap-4">
-                            <span className="text-hprh-clay">ACCOUNT NUMBER / HANDLE</span>
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="font-bold text-hprh-pine truncate">{selectedMethod.account_number}</span>
-                              <button 
-                                onClick={() => handleCopyText(selectedMethod.account_number!)}
-                                className="text-hprh-sage hover:text-hprh-pine shrink-0"
-                              >
-                                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                        {selectedMethod.routing_number && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-hprh-clay">ROUTING NUMBER</span>
-                            <span className="font-bold text-hprh-pine">{selectedMethod.routing_number}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* File Upload & Submit */}
-                    <form onSubmit={(e) => handlePaymentSubmit(e, 'TRANSPORT_FEE')} className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="block text-xs font-mono uppercase tracking-widest text-hprh-clay font-bold">Upload Receipt / Proof screenshot</label>
-                        {!selectedFile ? (
-                          <div className="border-2 border-dashed border-hprh-sage/30 hover:border-hprh-sage/60 transition-colors rounded-xl p-6 text-center cursor-pointer relative bg-hprh-paper/20">
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/jpg,image/heic,application/pdf"
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              onChange={handleFileChange}
-                              required
-                            />
-                            <div className="space-y-2">
-                              <Upload className="w-8 h-8 text-hprh-clay mx-auto" />
-                              <div className="text-xs font-semibold text-hprh-pine">Click to upload payment screenshot</div>
-                              <div className="text-[10px] text-hprh-clay">Allowed formats: JPG, PNG, HEIC, PDF. Max 5MB.</div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="bg-hprh-paper/50 border border-hprh-sage/20 rounded-xl p-4 flex items-center justify-between gap-4 text-xs font-mono">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <FileText className="w-6 h-6 text-hprh-sage shrink-0" />
-                              <div className="min-w-0">
-                                <div className="font-semibold text-hprh-pine truncate">{selectedFile.name}</div>
-                                <div className="text-[10px] text-hprh-clay">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</div>
-                              </div>
-                            </div>
-                            <button 
-                              type="button" 
-                              onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        )}
-
-                        {fileError && <p className="text-xs text-red-600 font-semibold">{fileError}</p>}
-                        {previewUrl && (
-                          <div className="border border-hprh-sage/10 rounded-xl p-2 bg-white max-w-xs overflow-hidden">
-                            <img src={previewUrl} alt="Receipt Preview" className="max-h-24 rounded mx-auto object-contain" />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Input
-                          label="Amount Sent"
-                          id="amountSent"
-                          type="number"
-                          step="0.01"
-                          value={amountClaimed}
-                          onChange={(e) => setAmountClaimed(e.target.value)}
-                          required
-                        />
-                        <Input
-                          label="Reference / Transaction Notes"
-                          id="referenceNote"
-                          placeholder="e.g. Zelle reference #12345"
-                          value={referenceNote}
-                          onChange={(e) => setReferenceNote(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="pt-2 flex justify-end">
-                        <Button type="submit" disabled={submitting || !selectedFile} variant="primary" className="w-full sm:w-auto">
-                          {submitting ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                              Submitting Receipt...
-                            </>
-                          ) : (
-                            'Submit Transit Payment'
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* STEP 3: Terms & Conditions Gate */}
-            {activeStep === 3 && assignment.deposit_terms_agreed === false && (
+            {/* STEP 2: Terms & Conditions Gate */}
+            {activeStep === 2 && assignment.deposit_terms_agreed === false && (
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-2">
                   <h3 className="text-lg font-bold text-hprh-pine">Refundable Security Deposit Agreement</h3>
@@ -862,8 +687,8 @@ export const FosterLocation: React.FC = () => {
               </div>
             )}
 
-            {/* STEP 4: Security Deposit Payment Proof Upload */}
-            {activeStep === 4 && (
+            {/* STEP 3: Security Deposit Payment Proof Upload */}
+            {activeStep === 3 && (
               <div className="space-y-6 animate-fade-in">
                 {status === 'DEPOSIT_PROOF_SUBMITTED' ? (
                   <div className="text-center py-8 space-y-4">
@@ -1014,83 +839,103 @@ export const FosterLocation: React.FC = () => {
               </div>
             )}
 
-            {/* STEP 5: Live Coordination Timeline & Tracking */}
-            {activeStep === 5 && (
+            {/* STEP 4: Live Coordination Timeline & Tracking / In-state Completion */}
+            {activeStep === 4 && (
               <div className="space-y-8 animate-fade-in">
-                {/* Status Card Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-dashed border-hprh-sage/20 pb-5 gap-4">
-                  <div>
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-hprh-clay font-bold block mb-1">
-                      Verified Route Registry
-                    </span>
-                    <h2 className="font-mono text-lg sm:text-xl font-bold text-hprh-pine uppercase tracking-wide">
-                      {transportRequest?.tracking_id}
-                    </h2>
-                  </div>
-                  <div>
-                    {status === 'DELIVERED' ? (
-                      <span className="bg-hprh-sage/10 border border-hprh-sage/30 text-hprh-sage text-[10px] font-mono font-bold uppercase tracking-wider px-3 py-1 rounded">
-                        Delivered
-                      </span>
-                    ) : (
-                      <span className="bg-hprh-sage/10 border border-hprh-sage/30 text-hprh-sage text-[10px] font-mono font-bold uppercase tracking-wider px-3 py-1 rounded animate-pulse">
-                        Active Transit
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Progress Stepper Timeline */}
-                <div className="space-y-6 pt-2">
-                  <h3 className="font-mono text-xs uppercase tracking-widest font-bold text-hprh-sage border-b border-hprh-sage/20 pb-1">
-                    Shipment Tracking Timeline
-                  </h3>
-
-                  {trackingUpdates.length === 0 ? (
-                    <div className="bg-hprh-paper border border-hprh-sage/15 p-4 rounded-xl text-xs text-hprh-pine/70 italic">
-                      Your foster transit route is being finalized. Tracking points will populate below as coordinators post updates.
+                {assignment.deposit_required === false && !transportRequest?.tracking_id ? (
+                  <div className="space-y-6 text-center py-6">
+                    <div className="mx-auto w-16 h-16 bg-hprh-sage/10 text-hprh-sage flex items-center justify-center rounded-full">
+                      <CheckCircle2 className="w-10 h-10" />
                     </div>
-                  ) : (
-                    <div className="relative pl-6 space-y-6 border-l-2 border-dashed border-hprh-sage/20 py-1 ml-2">
-                      {trackingUpdates.map((update: any) => {
-                        const d = new Date(update.created_at);
-                        const dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                        const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                        const warmDate = `${dateStr} at ${timeStr}`;
+                    <h3 className="text-2xl font-bold font-display text-hprh-pine">Route Registered</h3>
+                    <p className="text-sm text-hprh-clay max-w-md mx-auto">
+                      Your coordination address has been saved and matched to Michigan's foster delivery network.
+                    </p>
+                    <div className="bg-hprh-paper/50 border border-hprh-sage/20 rounded-xl p-4 text-left space-y-2 max-w-md mx-auto text-xs">
+                      <span className="font-bold block text-hprh-pine">Next Steps:</span>
+                      <p className="text-hprh-pine/70 leading-relaxed">
+                        Our logistics team will coordinate pickup and delivery details with you directly at <strong>{assignment.phone || assignment.email}</strong>. Fostering transport is free, and your security deposit is completely waived.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Status Card Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-dashed border-hprh-sage/20 pb-5 gap-4">
+                      <div>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-hprh-clay font-bold block mb-1">
+                          Verified Route Registry
+                        </span>
+                        <h2 className="font-mono text-lg sm:text-xl font-bold text-hprh-pine uppercase tracking-wide">
+                          {transportRequest?.tracking_id}
+                        </h2>
+                      </div>
+                      <div>
+                        {status === 'DELIVERED' ? (
+                          <span className="bg-hprh-sage/10 border border-hprh-sage/30 text-hprh-sage text-[10px] font-mono font-bold uppercase tracking-wider px-3 py-1 rounded">
+                            Delivered
+                          </span>
+                        ) : (
+                          <span className="bg-hprh-sage/10 border border-hprh-sage/30 text-hprh-sage text-[10px] font-mono font-bold uppercase tracking-wider px-3 py-1 rounded animate-pulse">
+                            Active Transit
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-                        return (
-                          <div key={update.id} className="relative">
-                            {/* Bullet */}
-                            <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 bg-hprh-sage border-hprh-sage text-white flex items-center justify-center">
-                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                            </div>
+                    {/* Progress Stepper Timeline */}
+                    <div className="space-y-6 pt-2">
+                      <h3 className="font-mono text-xs uppercase tracking-widest font-bold text-hprh-sage border-b border-hprh-sage/20 pb-1">
+                        Shipment Tracking Timeline
+                      </h3>
 
-                            <div className="space-y-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 border border-hprh-sage/20 bg-hprh-sage/5 text-hprh-sage rounded">
-                                  {update.status.replace(/_/g, ' ')}
-                                </span>
-                                <span className="text-[10px] text-hprh-clay font-mono">
-                                  {warmDate}
-                                </span>
-                              </div>
-                              {update.location_description && (
-                                <div className="text-xs font-bold text-hprh-pine">
-                                  Location: {update.location_description}
+                      {trackingUpdates.length === 0 ? (
+                        <div className="bg-hprh-paper border border-hprh-sage/15 p-4 rounded-xl text-xs text-hprh-pine/70 italic">
+                          Your foster transit route is being finalized. Tracking points will populate below as coordinators post updates.
+                        </div>
+                      ) : (
+                        <div className="relative pl-6 space-y-6 border-l-2 border-dashed border-hprh-sage/20 py-1 ml-2">
+                          {trackingUpdates.map((update: any) => {
+                            const d = new Date(update.created_at);
+                            const dateStr = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                            const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                            const warmDate = `${dateStr} at ${timeStr}`;
+
+                            return (
+                              <div key={update.id} className="relative">
+                                {/* Bullet */}
+                                <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 bg-hprh-sage border-hprh-sage text-white flex items-center justify-center">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
                                 </div>
-                              )}
-                              {update.note && (
-                                <p className="text-xs text-hprh-pine/75 leading-relaxed bg-hprh-paper/40 p-3 rounded-xl border border-hprh-sage/5">
-                                  {update.note}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+
+                                <div className="space-y-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 border border-hprh-sage/20 bg-hprh-sage/5 text-hprh-sage rounded">
+                                      {update.status.replace(/_/g, ' ')}
+                                    </span>
+                                    <span className="text-[10px] text-hprh-clay font-mono">
+                                      {warmDate}
+                                    </span>
+                                  </div>
+                                  {update.location_description && (
+                                    <div className="text-xs font-bold text-hprh-pine">
+                                      Location: {update.location_description}
+                                    </div>
+                                  )}
+                                  {update.note && (
+                                    <p className="text-xs text-hprh-pine/75 leading-relaxed bg-hprh-paper/40 p-3 rounded-xl border border-hprh-sage/5">
+                                      {update.note}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </div>
             )}
           </div>

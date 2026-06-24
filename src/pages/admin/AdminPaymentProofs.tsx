@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import type { PaymentProof } from '../../lib/types';
 import Container from '../../components/ui/Container';
 import Button from '../../components/ui/Button';
+import Badge from '../../components/ui/Badge';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -27,6 +28,8 @@ export const AdminPaymentProofs: React.FC = () => {
   const [expandedProofId, setExpandedProofId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'ALL'>('PENDING_REVIEW');
   const [activePurpose, setActivePurpose] = useState<'ALL' | 'ADOPTION_FEE' | 'TRANSPORT_FEE' | 'SECURITY_DEPOSIT'>('ALL');
+  
+  // ... (rest of state and functions unchanged)
   
   // Signed URLs cache for proof images/receipts
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
@@ -196,7 +199,7 @@ export const AdminPaymentProofs: React.FC = () => {
           });
 
           if (emailError) {
-            console.error('Failed to trigger email:', emailError);
+            console.error('Failed to send approval email:', emailError);
             setNotification({
               message: `Adoption fee wire proof approved. Dossier finalized. Adopter can now proceed to transport step. Note: Email notification failed to send.`,
               type: 'warning'
@@ -223,147 +226,70 @@ export const AdminPaymentProofs: React.FC = () => {
 
         if (updateReq1) throw updateReq1;
 
-        // Check if there is a foster assignment associated
-        const fosterAssignmentId = proof.transport_requests?.foster_assignment_id;
-        let depositRequired = true;
-        let applicantEmail = proof.adopters?.email;
-        let applicantName = proof.adopters?.full_name;
+        // 2. Fetch deposit setting
+        const { data: settingsData } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'security_deposit_amount')
+          .maybeSingle();
+        const depositAmount = parseFloat(settingsData?.value || '100.00');
 
-        if (fosterAssignmentId) {
-          const { data: faData } = await supabase
-            .from('foster_assignments')
-            .select('deposit_required, foster_volunteer_applications(email, full_name)')
-            .eq('id', fosterAssignmentId)
-            .maybeSingle();
-          if (faData) {
-            depositRequired = faData.deposit_required !== false;
-            if (faData.foster_volunteer_applications) {
-              const fva = faData.foster_volunteer_applications as any;
-              applicantEmail = fva.email;
-              applicantName = fva.full_name;
+        // 3. Create security_deposits row
+        const { data: depositObj, error: depositErr } = await supabase
+          .from('security_deposits')
+          .insert([{
+            transport_request_id: proof.transport_request_id,
+            amount: depositAmount,
+            currency: 'USD',
+            status: 'PENDING'
+          }])
+          .select()
+          .single();
+
+        if (depositErr) throw depositErr;
+
+        // 4. Update transport request
+        const { error: updateReq2 } = await supabase
+          .from('transport_requests')
+          .update({
+            status: 'DEPOSIT_PENDING',
+            security_deposit_id: depositObj.id
+          })
+          .eq('id', proof.transport_request_id);
+
+        if (updateReq2) throw updateReq2;
+
+        // 5. Send Email
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
+            body: {
+              type: 'deposit_requested',
+              adopterEmail: proof.adopters?.email,
+              adopterName: proof.adopters?.full_name,
+              petName: proof.pets?.name,
+              transportRequestId: proof.transport_request_id
             }
-          }
-        }
+          });
 
-        if (!depositRequired) {
-          // Michigan foster: Bypass security deposit entirely
-          const trackingId = await generateTrackingId();
-
-          const { error: updateRequestErr } = await supabase
-            .from('transport_requests')
-            .update({
-              tracking_id: trackingId,
-              tracking_activated_at: new Date().toISOString(),
-              status: 'TRACKING_ACTIVE'
-            })
-            .eq('id', proof.transport_request_id);
-
-          if (updateRequestErr) throw updateRequestErr;
-
-          // Trigger email: foster_payment_confirmed
-          try {
-            const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
-              body: {
-                type: 'foster_payment_confirmed',
-                adopterEmail: applicantEmail,
-                adopterName: applicantName,
-                petName: proof.pets?.name,
-                trackingId: trackingId
-              }
-            });
-
-            if (emailError) {
-              console.error('Failed to trigger email:', emailError);
-              setNotification({
-                message: `Transport fee approved. MI Deposit waived. Tracking ID: ${trackingId} activated. Note: Email notification failed to send.`,
-                type: 'warning'
-              });
-            } else {
-              setNotification({
-                message: `Transport fee approved. MI Deposit waived. Tracking ID: ${trackingId} activated and email sent.`,
-                type: 'success'
-              });
-            }
-          } catch (emailErr) {
-            console.error('Email trigger error:', emailErr);
+          if (emailError) {
+            console.error('Failed to trigger email:', emailError);
             setNotification({
-              message: `Transport fee approved. MI Deposit waived. Tracking ID: ${trackingId} activated.`,
+              message: `Transport fee approved. Security deposit requested. Note: Email notification failed to send.`,
+              type: 'warning'
+            });
+          } else {
+            setNotification({
+              message: `Transport fee approved. Security deposit requested and notification email sent.`,
               type: 'success'
             });
           }
-        } else {
-          // 2. Fetch deposit setting
-          const { data: settingsData } = await supabase
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'security_deposit_amount')
-            .maybeSingle();
-          const depositAmount = parseFloat(settingsData?.value || '100.00');
-
-          // 3. Create security_deposits row
-          const { data: depositObj, error: depositErr } = await supabase
-            .from('security_deposits')
-            .insert([{
-              transport_request_id: proof.transport_request_id,
-              amount: depositAmount,
-              currency: 'USD',
-              status: 'PENDING'
-            }])
-            .select()
-            .single();
-
-          if (depositErr) throw depositErr;
-
-          // 4. Update transport request
-          const { error: updateReq2 } = await supabase
-            .from('transport_requests')
-            .update({
-              status: 'DEPOSIT_PENDING',
-              security_deposit_id: depositObj.id
-            })
-            .eq('id', proof.transport_request_id);
-
-          if (updateReq2) throw updateReq2;
-
-          // 5. Send Email
-          try {
-            const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
-              body: fosterAssignmentId ? {
-                type: 'foster_deposit_requested',
-                adopterEmail: applicantEmail,
-                adopterName: applicantName,
-                petName: proof.pets?.name,
-                assignmentId: fosterAssignmentId
-              } : {
-                type: 'deposit_requested',
-                adopterEmail: applicantEmail,
-                adopterName: applicantName,
-                petName: proof.pets?.name,
-                transportRequestId: proof.transport_request_id
-              }
-            });
-
-            if (emailError) {
-              console.error('Failed to trigger email:', emailError);
-              setNotification({
-                message: `Transport fee approved. Security deposit requested. Note: Email notification failed to send.`,
-                type: 'warning'
-              });
-            } else {
-              setNotification({
-                message: `Transport fee approved. Security deposit requested and notification email sent.`,
-                type: 'success'
-              });
-            }
-          } catch (emailErr) {
-            console.error('Email trigger error:', emailErr);
-            setNotification({
-              message: `Transport fee approved. Security deposit requested.`,
-              type: 'success'
-            });
-          }
+        } catch (emailErr) {
+          console.error('Email trigger error:', emailErr);
+          setNotification({
+            message: `Transport fee approved. Security deposit requested.`,
+            type: 'success'
+          });
         }
-
       } else if (purpose === 'SECURITY_DEPOSIT') {
         // 1. Update deposit status
         const { error: updateDepositErr } = await supabase
@@ -509,11 +435,9 @@ export const AdminPaymentProofs: React.FC = () => {
 
   if (loading && proofs.length === 0) {
     return (
-      <div className="py-20 bg-hprh-paper min-h-[60vh] flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <div className="w-12 h-12 border-4 border-hprh-sage border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Loading Payment Queue...</p>
-        </div>
+      <div className="py-20 bg-hprh-paper min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-10 h-10 animate-spin text-hprh-sage" />
+        <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Loading Payment Queue...</p>
       </div>
     );
   }
@@ -523,16 +447,18 @@ export const AdminPaymentProofs: React.FC = () => {
       <Container className="space-y-8">
         
         {/* Page Header */}
-        <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5">
-          <span className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold block mb-1">
-            Auditing Dossiers
-          </span>
-          <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-hprh-pine">
-            Adoption Payment Review Queue
-          </h1>
-          <p className="text-xs text-hprh-pine/50 mt-1">
-            Audit manual bank wire transfer receipts submitted by approved adopters to release tracking IDs.
-          </p>
+        <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <span className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold block mb-1">
+              Auditing Dossiers
+            </span>
+            <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-hprh-pine">
+              Adoption Payment Review Queue
+            </h1>
+            <p className="text-xs text-hprh-pine/50 mt-1">
+              Audit manual bank wire transfer receipts submitted by approved adopters to release tracking IDs.
+            </p>
+          </div>
         </div>
 
         {error && (
@@ -691,19 +617,7 @@ export const AdminPaymentProofs: React.FC = () => {
                       </div>
 
                       <div className="flex items-center md:justify-start">
-                        {proof.status === 'PENDING_REVIEW' ? (
-                          <span className="inline-block font-display text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 border border-hprh-gold/50 bg-hprh-gold/5 text-hprh-gold rounded rotate-[1deg]">
-                            Pending Audit
-                          </span>
-                        ) : proof.status === 'APPROVED' ? (
-                          <span className="inline-block font-display text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 border border-hprh-sage/50 bg-hprh-sage/5 text-hprh-sage rounded rotate-[-1deg]">
-                            Approved
-                          </span>
-                        ) : (
-                          <span className="inline-block font-display text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 border border-hprh-clay/50 bg-hprh-clay/5 text-hprh-clay rounded rotate-[1.5deg]">
-                            Rejected
-                          </span>
-                        )}
+                        <Badge status={proof.status === 'PENDING_REVIEW' ? 'Pending Audit' : proof.status} className="text-[9px] px-2 py-0.5" />
                       </div>
                     </div>
 
@@ -880,19 +794,21 @@ export const AdminPaymentProofs: React.FC = () => {
                           <span className="text-[10px] font-mono text-hprh-pine/40 uppercase font-semibold">Triage Action:</span>
                           
                           <div className="inline-flex gap-2">
-                            <button
+                            <Button
                               onClick={() => openRejectModal(proof)}
                               disabled={actioningId !== null}
-                              className="bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 text-[10px] font-mono font-bold uppercase tracking-wider py-2.5 px-6 rounded inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                              variant="destructive"
+                              className="text-[10px] py-2 px-5 inline-flex items-center justify-center gap-1.5"
                             >
                               <X className="w-3.5 h-3.5" />
                               <span>Reject Proof</span>
-                            </button>
+                            </Button>
 
-                            <button
+                            <Button
                               onClick={() => handleApprove(proof)}
                               disabled={actioningId !== null}
-                              className="bg-hprh-sage text-hprh-paper hover:bg-hprh-sage/95 text-[10px] font-mono font-bold uppercase tracking-wider py-2.5 px-6 rounded inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                              variant="success"
+                              className="text-[10px] py-2 px-5 inline-flex items-center justify-center gap-1.5"
                             >
                               {actioningId === proof.id ? (
                                 <>
@@ -905,7 +821,7 @@ export const AdminPaymentProofs: React.FC = () => {
                                   <span>Approve & Release Tracking</span>
                                 </>
                               )}
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -959,13 +875,14 @@ export const AdminPaymentProofs: React.FC = () => {
                 <Button variant="ghost" onClick={() => setIsRejectModalOpen(false)}>
                   Cancel
                 </Button>
-                <button
+                <Button
                   onClick={handleReject}
                   disabled={!rejectionReason.trim()}
-                  className="bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 text-[10px] font-mono font-bold uppercase tracking-wider py-2.5 px-5 rounded disabled:opacity-50 transition-colors"
+                  variant="destructive"
+                  className="text-[10px] py-2.5 px-5"
                 >
                   Reject & Notify
-                </button>
+                </Button>
               </div>
             </div>
           </div>

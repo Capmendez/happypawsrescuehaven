@@ -9,7 +9,8 @@ import {
   ShieldAlert,
   Building2,
   CreditCard,
-  Truck
+  Truck,
+  Loader2
 } from 'lucide-react';
 
 interface StatsState {
@@ -83,11 +84,9 @@ export const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="py-20 bg-hprh-paper min-h-[60vh] flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <div className="w-12 h-12 border-4 border-hprh-sage border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Compiling Portal Statistics...</p>
-        </div>
+      <div className="py-20 bg-hprh-paper min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-10 h-10 animate-spin text-hprh-sage" />
+        <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Compiling Portal Statistics...</p>
       </div>
     );
   }
@@ -97,16 +96,18 @@ export const AdminDashboard: React.FC = () => {
       <Container className="space-y-10">
         
         {/* Dashboard Header */}
-        <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5">
-          <span className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold block mb-1">
-            System Overview
-          </span>
-          <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-hprh-pine">
-            Rescue Haven Dashboard
-          </h1>
-          <p className="text-xs text-hprh-pine/50 mt-1">
-            Real-time rescue registry audits and staff operation shortcuts.
-          </p>
+        <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <span className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold block mb-1">
+              System Overview
+            </span>
+            <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-hprh-pine">
+              Rescue Haven Dashboard
+            </h1>
+            <p className="text-xs text-hprh-pine/50 mt-1">
+              Real-time rescue registry audits and staff operation shortcuts.
+            </p>
+          </div>
         </div>
 
         {error && (

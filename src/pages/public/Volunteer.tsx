@@ -187,7 +187,7 @@ export const Volunteer: React.FC = () => {
   if (submitSuccess) {
     return (
       <div className="py-20 bg-hprh-paper flex-grow flex items-center justify-center">
-        <Container maxW="md" className="space-y-8 animate-fade-in">
+        <Container className="max-w-md space-y-8 animate-fade-in">
           <div className="bg-white/80 backdrop-blur-md rounded-2xl p-8 border border-hprh-sage/20 shadow-xl text-center space-y-6">
             <div className="mx-auto w-16 h-16 bg-hprh-sage/10 text-hprh-sage flex items-center justify-center rounded-full">
               <CheckCircle2 className="w-10 h-10" />
@@ -229,7 +229,7 @@ export const Volunteer: React.FC = () => {
 
   return (
     <div className="py-12 bg-hprh-paper flex-grow">
-      <Container maxW="xl" className="space-y-8">
+      <Container className="max-w-xl space-y-8">
         {/* Back Link */}
         <div className="flex items-center">
           <Link to="/adopt" className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-hprh-clay hover:text-hprh-pine transition-colors">

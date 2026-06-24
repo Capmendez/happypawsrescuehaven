@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'success' | 'destructive';
   children: React.ReactNode;
 }
 
@@ -21,6 +21,8 @@ export const Button: React.FC<ButtonProps> = ({
     primary: 'bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 border border-hprh-clay focus:ring-hprh-clay focus:ring-offset-hprh-paper',
     secondary: 'bg-hprh-sage text-hprh-paper hover:bg-hprh-sage/95 border border-hprh-sage focus:ring-hprh-sage focus:ring-offset-hprh-paper',
     ghost: 'text-hprh-sage hover:bg-hprh-sage/10 border border-transparent focus:ring-hprh-sage focus:ring-offset-hprh-paper',
+    success: 'bg-hprh-sage text-hprh-paper hover:bg-hprh-sage/95 border border-hprh-sage focus:ring-hprh-sage focus:ring-offset-hprh-paper',
+    destructive: 'bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 border border-hprh-clay focus:ring-hprh-clay focus:ring-offset-hprh-paper',
   };
 
   return (

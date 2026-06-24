@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import type { AdoptionApplication } from '../../lib/types';
 import Container from '../../components/ui/Container';
 import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -224,11 +225,9 @@ export const AdminApplications: React.FC = () => {
 
   if (loading && applications.length === 0) {
     return (
-      <div className="py-20 bg-hprh-paper min-h-[60vh] flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <div className="w-12 h-12 border-4 border-hprh-sage border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Retrieving Application Queue...</p>
-        </div>
+      <div className="py-20 bg-hprh-paper min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-10 h-10 animate-spin text-hprh-sage" />
+        <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Retrieving Application Queue...</p>
       </div>
     );
   }
@@ -238,16 +237,18 @@ export const AdminApplications: React.FC = () => {
       <Container className="space-y-8">
         
         {/* Page Header */}
-        <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5">
-          <span className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold block mb-1">
-            Operation Dossiers
-          </span>
-          <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-hprh-pine">
-            Adoption Applications Queue
-          </h1>
-          <p className="text-xs text-hprh-pine/50 mt-1">
-            Audit and finalize housing questionnaires submitted by prospective pet caretakers.
-          </p>
+        <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <span className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold block mb-1">
+              Operation Dossiers
+            </span>
+            <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-hprh-pine">
+              Adoption Applications Queue
+            </h1>
+            <p className="text-xs text-hprh-pine/50 mt-1">
+              Audit and finalize housing questionnaires submitted by prospective pet caretakers.
+            </p>
+          </div>
         </div>
 
         {error && (
@@ -521,21 +522,23 @@ export const AdminApplications: React.FC = () => {
                       {/* Action Triggers (Only show if PENDING) */}
                       {app.status === 'PENDING' && (
                         <div className="border-t border-dashed border-hprh-pine/15 pt-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                          <button
+                          <Button
                             onClick={() => handleStatusUpdate(app.id, 'APPROVED')}
-                            className="bg-hprh-sage text-hprh-paper hover:bg-hprh-sage/95 text-[10px] font-mono font-bold uppercase tracking-wider py-2.5 px-6 rounded inline-flex items-center justify-center gap-1.5 transition-colors"
+                            variant="success"
+                            className="w-full sm:w-auto flex items-center justify-center gap-1.5"
                           >
                             <Check className="w-3.5 h-3.5" />
                             Approve Application
-                          </button>
+                          </Button>
 
-                          <button
+                          <Button
                             onClick={() => handleStatusUpdate(app.id, 'REJECTED')}
-                            className="bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 text-[10px] font-mono font-bold uppercase tracking-wider py-2.5 px-6 rounded inline-flex items-center justify-center gap-1.5 transition-colors"
+                            variant="destructive"
+                            className="w-full sm:w-auto flex items-center justify-center gap-1.5"
                           >
                             <X className="w-3.5 h-3.5" />
                             Reject Application
-                          </button>
+                          </Button>
                         </div>
                       )}
 

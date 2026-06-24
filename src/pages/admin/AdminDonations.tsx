@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Donation } from '../../lib/types';
 import Container from '../../components/ui/Container';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -179,7 +181,7 @@ export const AdminDonations: React.FC = () => {
     return (
       <div className="py-20 bg-hprh-paper min-h-[60vh] flex items-center justify-center">
         <div className="space-y-4 text-center">
-          <div className="w-12 h-12 border-4 border-hprh-sage border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <Loader2 className="w-10 h-10 animate-spin text-hprh-sage mx-auto" />
           <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Loading Donations List...</p>
         </div>
       </div>
@@ -191,7 +193,7 @@ export const AdminDonations: React.FC = () => {
       <Container className="space-y-8">
         
         {/* Page Header */}
-        <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5">
+        <div className="border-b border-hprh-pine/10 pb-5">
           <span className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold block mb-1">
             Philanthropy Ledger
           </span>
@@ -308,19 +310,7 @@ export const AdminDonations: React.FC = () => {
                       </div>
 
                       <div className="flex items-center md:justify-start">
-                        {donation.status === 'PENDING_REVIEW' ? (
-                          <span className="inline-block font-display text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 border border-hprh-gold/50 bg-hprh-gold/5 text-hprh-gold rounded rotate-[1deg]">
-                            Pending Audit
-                          </span>
-                        ) : donation.status === 'CONFIRMED' ? (
-                          <span className="inline-block font-display text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 border border-hprh-sage/50 bg-hprh-sage/5 text-hprh-sage rounded rotate-[-1deg]">
-                            Confirmed
-                          </span>
-                        ) : (
-                          <span className="inline-block font-display text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 border border-hprh-clay/50 bg-hprh-clay/5 text-hprh-clay rounded rotate-[1.5deg]">
-                            Rejected
-                          </span>
-                        )}
+                        <Badge status={donation.status === 'PENDING_REVIEW' ? 'Pending Audit' : donation.status} className="text-[9px] px-2 py-0.5" />
                       </div>
                     </div>
 
@@ -453,23 +443,25 @@ export const AdminDonations: React.FC = () => {
                           <span className="text-[10px] font-mono text-hprh-pine/40 uppercase font-semibold">Triage Action:</span>
                           
                           <div className="inline-flex gap-2">
-                            <button
+                            <Button
                               onClick={() => handleUpdateStatus(donation, 'REJECTED')}
                               disabled={actioningId !== null}
-                              className="bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 text-[10px] font-mono font-bold uppercase tracking-wider py-2.5 px-6 rounded inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                              variant="destructive"
+                              className="text-[10px] font-mono font-bold uppercase tracking-wider py-2.5 px-6 rounded inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                             >
                               <X className="w-3.5 h-3.5" />
                               <span>Reject Donation</span>
-                            </button>
+                            </Button>
 
-                            <button
+                            <Button
                               onClick={() => handleUpdateStatus(donation, 'CONFIRMED')}
                               disabled={actioningId !== null}
-                              className="bg-hprh-sage text-hprh-paper hover:bg-hprh-sage/95 text-[10px] font-mono font-bold uppercase tracking-wider py-2.5 px-6 rounded inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                              variant="success"
+                              className="text-[10px] font-mono font-bold uppercase tracking-wider py-2.5 px-6 rounded inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                             >
                               <Check className="w-3.5 h-3.5" />
                               <span>Confirm Donation</span>
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       )}

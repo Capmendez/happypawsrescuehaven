@@ -15,7 +15,8 @@ import {
   X, 
   ShieldAlert, 
   Upload,
-  Settings
+  Settings,
+  Loader2
 } from 'lucide-react';
 
 export const AdminPaymentMethods: React.FC = () => {
@@ -32,6 +33,19 @@ export const AdminPaymentMethods: React.FC = () => {
   const [contactEmail, setContactEmail] = useState('support@happypawsrescuehaven.com');
   const [contactAddress, setContactAddress] = useState('Grand Rapids, MI 49503');
   const [updatingContactSettings, setUpdatingContactSettings] = useState(false);
+
+  // Public Social Settings State
+  const [socialTiktok, setSocialTiktok] = useState('');
+  const [socialFacebook, setSocialFacebook] = useState('');
+  const [socialInstagram, setSocialInstagram] = useState('');
+  const [socialX, setSocialX] = useState('');
+  const [updatingSocialSettings, setUpdatingSocialSettings] = useState(false);
+
+  // Live Chat (Tawk.to) Settings State
+  const [tawktoPropertyId, setTawktoPropertyId] = useState('');
+  const [tawktoWidgetId, setTawktoWidgetId] = useState('');
+  const [tawktoEnabled, setTawktoEnabled] = useState(false);
+  const [updatingTawktoSettings, setUpdatingTawktoSettings] = useState(false);
 
   // Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -89,7 +103,14 @@ export const AdminPaymentMethods: React.FC = () => {
           'security_deposit_amount',
           'contact_phone',
           'contact_email',
-          'contact_address'
+          'contact_address',
+          'social_tiktok',
+          'social_facebook',
+          'social_instagram',
+          'social_x',
+          'tawkto_property_id',
+          'tawkto_widget_id',
+          'tawkto_enabled'
         ]);
 
       if (settingsError) throw settingsError;
@@ -99,6 +120,13 @@ export const AdminPaymentMethods: React.FC = () => {
           if (row.key === 'contact_phone') setContactPhone(row.value);
           if (row.key === 'contact_email') setContactEmail(row.value);
           if (row.key === 'contact_address') setContactAddress(row.value);
+          if (row.key === 'social_tiktok') setSocialTiktok(row.value || '');
+          if (row.key === 'social_facebook') setSocialFacebook(row.value || '');
+          if (row.key === 'social_instagram') setSocialInstagram(row.value || '');
+          if (row.key === 'social_x') setSocialX(row.value || '');
+          if (row.key === 'tawkto_property_id') setTawktoPropertyId(row.value || '');
+          if (row.key === 'tawkto_widget_id') setTawktoWidgetId(row.value || '');
+          if (row.key === 'tawkto_enabled') setTawktoEnabled(row.value === 'true');
         });
       }
     } catch (err: any) {
@@ -224,8 +252,8 @@ export const AdminPaymentMethods: React.FC = () => {
         type: 'success'
       });
     } catch (err: any) {
-      console.error('Logo upload error:', err);
-      alert('Failed to upload logo: ' + (err.message || 'Unknown error'));
+      console.error('Error uploading logo:', err);
+      alert('Upload failed: ' + err.message);
     } finally {
       setUploadingLogo(false);
     }
@@ -477,13 +505,70 @@ export const AdminPaymentMethods: React.FC = () => {
     }
   };
 
+  const handleUpdateSocialSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setUpdatingSocialSettings(true);
+      const { error: settingsError } = await supabase
+        .from('app_settings')
+        .upsert([
+          { key: 'social_tiktok', value: socialTiktok.trim() },
+          { key: 'social_facebook', value: socialFacebook.trim() },
+          { key: 'social_instagram', value: socialInstagram.trim() },
+          { key: 'social_x', value: socialX.trim() }
+        ]);
+
+      if (settingsError) throw settingsError;
+
+      setNotification({
+        message: 'Social Media Links updated successfully.',
+        type: 'success'
+      });
+    } catch (err: any) {
+      console.error('Error updating social settings:', err);
+      setNotification({
+        message: `Failed to update social settings: ${err.message}`,
+        type: 'error'
+      });
+    } finally {
+      setUpdatingSocialSettings(false);
+    }
+  };
+
+  const handleUpdateTawktoSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setUpdatingTawktoSettings(true);
+      const { error: settingsError } = await supabase
+        .from('app_settings')
+        .upsert([
+          { key: 'tawkto_property_id', value: tawktoPropertyId.trim() },
+          { key: 'tawkto_widget_id', value: tawktoWidgetId.trim() },
+          { key: 'tawkto_enabled', value: tawktoEnabled ? 'true' : 'false' }
+        ]);
+
+      if (settingsError) throw settingsError;
+
+      setNotification({
+        message: 'Live Chat Settings updated successfully.',
+        type: 'success'
+      });
+    } catch (err: any) {
+      console.error('Error updating live chat settings:', err);
+      setNotification({
+        message: `Failed to update live chat settings: ${err.message}`,
+        type: 'error'
+      });
+    } finally {
+      setUpdatingTawktoSettings(false);
+    }
+  };
+
   if (loading && methods.length === 0) {
     return (
-      <div className="py-20 bg-hprh-paper min-h-[60vh] flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <div className="w-12 h-12 border-4 border-hprh-sage border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Fetching payment methods...</p>
-        </div>
+      <div className="py-20 bg-hprh-paper min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-10 h-10 animate-spin text-hprh-sage" />
+        <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Fetching payment methods...</p>
       </div>
     );
   }
@@ -506,13 +591,14 @@ export const AdminPaymentMethods: React.FC = () => {
             </p>
           </div>
           
-          <button
+          <Button
+            variant="primary"
             onClick={openAddForm}
-            className="inline-flex items-center gap-1.5 bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 text-xs font-mono font-bold uppercase tracking-wider px-5 py-3 rounded self-start sm:self-center transition-colors shadow"
+            className="inline-flex items-center gap-1.5 self-start sm:self-center"
           >
             <Plus className="w-4 h-4" />
             <span>Add Payment Method</span>
-          </button>
+          </Button>
         </div>
 
         {error && (
@@ -652,7 +738,7 @@ export const AdminPaymentMethods: React.FC = () => {
 
         {/* Setting Panel: Security Deposit Settings */}
         <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded-lg p-6 space-y-4 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-hprh-sage"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-hprh-sage"></div>
           <div className="flex items-center gap-2 border-b border-hprh-pine/10 pb-3">
             <Settings className="w-5 h-5 text-hprh-sage" />
             <h2 className="font-display text-lg font-bold text-hprh-pine">
@@ -674,13 +760,14 @@ export const AdminPaymentMethods: React.FC = () => {
               />
             </div>
             
-            <button
+            <Button
               type="submit"
               disabled={updatingSettings}
-              className="bg-hprh-sage text-hprh-paper hover:bg-hprh-sage/95 text-xs font-mono font-bold uppercase tracking-wider py-3.5 px-6 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow"
+              variant="secondary"
+              className="w-full sm:w-auto"
             >
               {updatingSettings ? 'Updating...' : 'Save Settings'}
-            </button>
+            </Button>
           </form>
           
           <p className="text-[10px] text-hprh-pine/45 italic">
@@ -690,9 +777,9 @@ export const AdminPaymentMethods: React.FC = () => {
 
         {/* Setting Panel: Public Contact Information Settings */}
         <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded-lg p-6 space-y-4 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-hprh-clay"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-hprh-sage"></div>
           <div className="flex items-center gap-2 border-b border-hprh-pine/10 pb-3">
-            <Settings className="w-5 h-5 text-hprh-clay" />
+            <Settings className="w-5 h-5 text-hprh-sage" />
             <h2 className="font-display text-lg font-bold text-hprh-pine">
               Public Contact Information
             </h2>
@@ -726,17 +813,131 @@ export const AdminPaymentMethods: React.FC = () => {
               />
             </div>
             
-            <button
+            <Button
               type="submit"
               disabled={updatingContactSettings}
-              className="bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 text-xs font-mono font-bold uppercase tracking-wider py-3.5 px-6 rounded transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow"
+              variant="primary"
+              className="w-full sm:w-auto"
             >
               {updatingContactSettings ? 'Updating...' : 'Save Contact Settings'}
-            </button>
+            </Button>
           </form>
           
           <p className="text-[10px] text-hprh-pine/45 italic">
             * This contact information is displayed publicly on the contact page. Updating these settings will update the public website contact coordinates immediately.
+          </p>
+        </div>
+
+        {/* Setting Panel: Social Media Links Settings */}
+        <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded-lg p-6 space-y-4 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-hprh-sage"></div>
+          <div className="flex items-center gap-2 border-b border-hprh-pine/10 pb-3">
+            <Settings className="w-5 h-5 text-hprh-sage" />
+            <h2 className="font-display text-lg font-bold text-hprh-pine">
+              Social Media Links
+            </h2>
+          </div>
+          
+          <form onSubmit={handleUpdateSocialSettings} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="TikTok URL"
+                type="text"
+                value={socialTiktok}
+                onChange={(e) => setSocialTiktok(e.target.value)}
+                placeholder="e.g. https://www.tiktok.com/@happypaws"
+              />
+              <Input
+                label="Facebook URL"
+                type="text"
+                value={socialFacebook}
+                onChange={(e) => setSocialFacebook(e.target.value)}
+                placeholder="e.g. https://www.facebook.com/happypaws"
+              />
+              <Input
+                label="Instagram URL"
+                type="text"
+                value={socialInstagram}
+                onChange={(e) => setSocialInstagram(e.target.value)}
+                placeholder="e.g. https://www.instagram.com/happypaws"
+              />
+              <Input
+                label="X (Twitter) URL"
+                type="text"
+                value={socialX}
+                onChange={(e) => setSocialX(e.target.value)}
+                placeholder="e.g. https://x.com/happypaws"
+              />
+            </div>
+            
+            <Button
+              type="submit"
+              disabled={updatingSocialSettings}
+              variant="secondary"
+              className="w-full sm:w-auto"
+            >
+              {updatingSocialSettings ? 'Updating...' : 'Save Social Settings'}
+            </Button>
+          </form>
+          
+          <p className="text-[10px] text-hprh-pine/45 italic">
+            * Social Media Links left blank will not display on the public About page. Enter full URLs starting with http:// or https://.
+          </p>
+        </div>
+
+        {/* Setting Panel: Live Chat (Tawk.to) Settings */}
+        <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded-lg p-6 space-y-4 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-hprh-sage"></div>
+          <div className="flex items-center gap-2 border-b border-hprh-pine/10 pb-3">
+            <Settings className="w-5 h-5 text-hprh-sage" />
+            <h2 className="font-display text-lg font-bold text-hprh-pine">
+              Live Chat (Tawk.to)
+            </h2>
+          </div>
+          
+          <form onSubmit={handleUpdateTawktoSettings} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Tawk.to Property ID"
+                type="text"
+                value={tawktoPropertyId}
+                onChange={(e) => setTawktoPropertyId(e.target.value)}
+                placeholder="e.g. 60bxxxxxxxxxxxxxxxxxxxxx"
+              />
+              <Input
+                label="Tawk.to Widget ID"
+                type="text"
+                value={tawktoWidgetId}
+                onChange={(e) => setTawktoWidgetId(e.target.value)}
+                placeholder="e.g. 1fxxxxxxxx"
+              />
+            </div>
+
+            <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-hprh-pine/10 max-w-sm">
+              <input
+                type="checkbox"
+                id="tawktoEnabled"
+                className="w-4.5 h-4.5 rounded border-hprh-sage/30 text-hprh-sage focus:ring-hprh-sage cursor-pointer"
+                checked={tawktoEnabled}
+                onChange={(e) => setTawktoEnabled(e.target.checked)}
+              />
+              <label htmlFor="tawktoEnabled" className="text-xs text-hprh-pine cursor-pointer select-none leading-relaxed font-bold">
+                Enable Site-Wide Live Chat Widget
+              </label>
+            </div>
+            
+            <Button
+              type="submit"
+              disabled={updatingTawktoSettings}
+              variant="primary"
+              className="w-full sm:w-auto"
+            >
+              {updatingTawktoSettings ? 'Updating...' : 'Save Live Chat Settings'}
+            </Button>
+          </form>
+          
+          <p className="text-[10px] text-hprh-pine/45 italic">
+            * Live chat will not appear on the site until both Property ID and Widget ID are filled in and this is enabled.
           </p>
         </div>
 

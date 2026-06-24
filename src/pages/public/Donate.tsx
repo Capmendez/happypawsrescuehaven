@@ -15,7 +15,6 @@ import {
   Loader2, 
   Heart,
   DollarSign,
-  ArrowRight,
   ExternalLink
 } from 'lucide-react';
 

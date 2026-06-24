@@ -32,6 +32,7 @@ import AdminTransportSettings from './pages/admin/AdminTransportSettings';
 import AdminTransportUpdates from './pages/admin/AdminTransportUpdates';
 import TransportRequestPage from './pages/public/TransportRequestPage';
 import AdminFosterApplications from './pages/admin/AdminFosterApplications';
+import LiveChatWidget from './components/layout/LiveChatWidget';
 
 function App() {
   return (
@@ -171,6 +172,7 @@ function App() {
           />
         </Routes>
       </PageShell>
+      <LiveChatWidget />
     </Router>
   );
 }

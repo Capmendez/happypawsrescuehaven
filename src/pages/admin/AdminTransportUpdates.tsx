@@ -6,6 +6,7 @@ import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
+import Badge from '../../components/ui/Badge';
 import { 
   Search, 
   MapPin, 
@@ -259,7 +260,7 @@ export const AdminTransportUpdates: React.FC = () => {
       <Container className="space-y-8">
         
         {/* Page Header */}
-        <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5">
+        <div className="border-b border-hprh-pine/10 pb-5">
           <span className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold block mb-1">
             Transit Logs Management
           </span>
@@ -286,7 +287,8 @@ export const AdminTransportUpdates: React.FC = () => {
           
           {/* LEFT COLUMN: Shipments List Sidebar */}
           <div className="space-y-4 lg:col-span-1">
-            <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-4 shadow-sm space-y-4">
+            <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-4 shadow-sm space-y-4 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-hprh-sage"></div>
               <span className="font-mono text-[10px] uppercase tracking-widest text-hprh-pine/50 font-bold block">
                 Active Shipments Search
               </span>
@@ -348,13 +350,13 @@ export const AdminTransportUpdates: React.FC = () => {
                         </div>
                         
                         <div className="text-right flex flex-col items-end gap-1.5">
-                          <span className={`text-[8px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 border rounded-sm ${
-                            isSelected 
-                              ? 'bg-hprh-paper/10 border-hprh-paper/20 text-hprh-paper' 
-                              : getStatusBadgeStyle(displayStatus)
-                          }`}>
-                            {displayStatus.replace(/_/g, ' ')}
-                          </span>
+                          {isSelected ? (
+                            <span className="text-[8px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 border rounded-sm bg-hprh-paper/10 border-hprh-paper/20 text-hprh-paper">
+                              {displayStatus.replace(/_/g, ' ')}
+                            </span>
+                          ) : (
+                            <Badge status={displayStatus} className="text-[8px] px-1.5 py-0.2" />
+                          )}
                           {displayLocation && (
                             <span className={`text-[8px] font-mono font-bold block truncate max-w-[80px] ${
                               isSelected ? 'text-hprh-paper/50' : 'text-hprh-pine/40'
@@ -374,7 +376,8 @@ export const AdminTransportUpdates: React.FC = () => {
           {/* RIGHT COLUMN: Shipment Detail, Timeline & Posting Form */}
           <div className="lg:col-span-2 space-y-6">
             {!selectedRequest ? (
-              <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-12 text-center shadow-sm space-y-3">
+              <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-12 text-center shadow-sm space-y-3 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-hprh-sage"></div>
                 <Truck className="w-10 h-10 text-hprh-pine/20 mx-auto" />
                 <h3 className="font-display text-lg font-bold text-hprh-pine/70">No Shipment Selected</h3>
                 <p className="text-xs text-hprh-pine/45 max-w-sm mx-auto leading-relaxed">
@@ -385,7 +388,8 @@ export const AdminTransportUpdates: React.FC = () => {
               <div className="space-y-6">
                 
                 {/* A. Selected Passenger Dossier Header */}
-                <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-5 sm:p-6 shadow-sm space-y-4 text-left">
+                <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-5 sm:p-6 shadow-sm space-y-4 text-left relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-hprh-sage"></div>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-dashed border-hprh-pine/15 pb-4 gap-3">
                     <div>
                       <span className="font-mono text-[9px] uppercase tracking-widest text-hprh-pine/40 font-bold block mb-1">
@@ -401,9 +405,7 @@ export const AdminTransportUpdates: React.FC = () => {
 
                     <div className="text-left sm:text-right">
                       <span className="block text-[8px] font-mono uppercase tracking-widest text-hprh-pine/40 mb-1">Workflow Status</span>
-                      <span className="bg-hprh-pine text-hprh-paper text-[10px] font-mono font-bold uppercase tracking-wider px-3 py-1 rounded">
-                        {selectedRequest.status.replace(/_/g, ' ')}
-                      </span>
+                      <Badge status={selectedRequest.status} className="text-[10px] px-2.5 py-0.5" />
                     </div>
                   </div>
 
@@ -435,7 +437,8 @@ export const AdminTransportUpdates: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                   
                   {/* Timeline History log */}
-                  <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-5 shadow-sm space-y-4 text-left">
+                  <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-5 shadow-sm space-y-4 text-left relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-hprh-sage"></div>
                     <div className="flex items-center gap-1.5 border-b border-hprh-pine/10 pb-2">
                       <History className="w-4 h-4 text-hprh-sage" />
                       <h3 className="font-mono text-xs uppercase tracking-widest font-bold text-hprh-sage">
@@ -471,11 +474,7 @@ export const AdminTransportUpdates: React.FC = () => {
 
                               <div className="space-y-1">
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className={`text-[8px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-sm border ${
-                                    getStatusBadgeStyle(update.status)
-                                  }`}>
-                                    {update.status.replace(/_/g, ' ')}
-                                  </span>
+                                  <Badge status={update.status} className="text-[8px] px-1.5 py-0.2" />
                                   <span className="text-[9px] font-mono text-hprh-pine/45">{warmDate}</span>
                                 </div>
 
@@ -503,7 +502,8 @@ export const AdminTransportUpdates: React.FC = () => {
                   </div>
 
                   {/* Posting form */}
-                  <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-5 shadow-sm space-y-4 text-left">
+                  <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-5 shadow-sm space-y-4 text-left relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-hprh-clay"></div>
                     <div className="flex items-center gap-1.5 border-b border-hprh-pine/10 pb-2">
                       <MapPin className="w-4 h-4 text-hprh-clay" />
                       <h3 className="font-mono text-xs uppercase tracking-widest font-bold text-hprh-clay">

@@ -13,7 +13,8 @@ import {
   ShieldAlert, 
   Truck, 
   AlertTriangle, 
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
 interface TransportFeeTier {
@@ -371,7 +372,7 @@ export const AdminTransportSettings: React.FC = () => {
     return (
       <div className="py-20 bg-hprh-paper min-h-[60vh] flex items-center justify-center">
         <div className="space-y-4 text-center">
-          <div className="w-12 h-12 border-4 border-hprh-sage border-t-transparent rounded-full animate-spin mx-auto text-hprh-sage"></div>
+          <Loader2 className="w-10 h-10 animate-spin text-hprh-sage mx-auto" />
           <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Fetching transport parameters...</p>
         </div>
       </div>
@@ -383,7 +384,7 @@ export const AdminTransportSettings: React.FC = () => {
       <Container className="space-y-10">
         
         {/* Header Controls */}
-        <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="border-b border-hprh-pine/10 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <span className="font-mono text-xs uppercase tracking-widest text-hprh-sage font-bold block mb-1">
               Treasury Management
@@ -396,13 +397,14 @@ export const AdminTransportSettings: React.FC = () => {
             </p>
           </div>
           
-          <button
+          <Button
             onClick={openAddForm}
-            className="inline-flex items-center gap-1.5 bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 text-xs font-mono font-bold uppercase tracking-wider px-5 py-3 rounded self-start sm:self-center transition-colors shadow"
+            variant="primary"
+            className="self-start sm:self-center"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 mr-1.5" />
             <span>Add Fee Tier</span>
-          </button>
+          </Button>
         </div>
 
         {error && (
@@ -638,7 +640,7 @@ export const AdminTransportSettings: React.FC = () => {
                 
                 <Button
                   type="submit"
-                  variant="secondary"
+                  variant="success"
                   disabled={submitting}
                   className="font-semibold"
                 >

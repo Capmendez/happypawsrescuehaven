@@ -393,11 +393,9 @@ export const AdminPetForm: React.FC = () => {
 
   if (fetchingPet) {
     return (
-      <div className="py-20 bg-hprh-paper min-h-[60vh] flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <div className="w-12 h-12 border-4 border-hprh-sage border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Fetching Case Record...</p>
-        </div>
+      <div className="py-20 bg-hprh-paper min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-10 h-10 animate-spin text-hprh-sage" />
+        <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Fetching Case Record...</p>
       </div>
     );
   }
@@ -416,14 +414,14 @@ export const AdminPetForm: React.FC = () => {
 
         {/* Form Container */}
         <div
-          className="bg-hprh-paper-dark border-2 border-hprh-pine/20 rounded shadow-md p-6 md:p-8 relative overflow-hidden"
+          className="bg-hprh-paper-dark border border-hprh-pine/15 rounded shadow-sm p-6 sm:p-8 relative overflow-hidden"
           style={{
             backgroundImage: 'radial-gradient(#1f2a1e05 1px, transparent 0)',
             backgroundSize: '16px 16px',
           }}
         >
           {/* Accent border */}
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-hprh-sage"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-hprh-sage"></div>
 
           {/* Form Header */}
           <div className="border-b-2 border-dashed border-hprh-pine/20 pb-5 mb-6">
@@ -534,7 +532,7 @@ export const AdminPetForm: React.FC = () => {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      className="flex-grow bg-hprh-paper border-2 border-hprh-pine/15 focus:border-hprh-sage focus:ring-1 focus:ring-hprh-sage rounded p-3 text-xs text-hprh-pine font-sans focus:outline-none"
+                      className="flex-grow bg-hprh-paper border-2 border-hprh-pine/15 focus:border-hprh-sage focus:ring-1 focus:ring-hprh-sage rounded px-3.5 py-2.5 text-sm text-hprh-pine font-sans focus:outline-none"
                       placeholder="e.g. 1109 N Highland St, Arlington, VA"
                       {...register('current_location')}
                       onChange={(e) => {

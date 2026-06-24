@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { Pet } from '../../lib/types';
 import Container from '../../components/ui/Container';
 import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
 import { 
   Plus, 
   Edit, 
   Trash2, 
   Search, 
-  ShieldAlert
+  ShieldAlert,
+  Loader2
 } from 'lucide-react';
 
 export const AdminPets: React.FC = () => {
@@ -146,11 +148,9 @@ export const AdminPets: React.FC = () => {
 
   if (loading && pets.length === 0) {
     return (
-      <div className="py-20 bg-hprh-paper min-h-[60vh] flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <div className="w-12 h-12 border-4 border-hprh-sage border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Loading Intake Database...</p>
-        </div>
+      <div className="py-20 bg-hprh-paper min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-10 h-10 animate-spin text-hprh-sage" />
+        <p className="font-mono text-xs uppercase tracking-widest text-hprh-pine/50">Loading Intake Database...</p>
       </div>
     );
   }
@@ -173,13 +173,14 @@ export const AdminPets: React.FC = () => {
             </p>
           </div>
           
-          <Link
-            to="/admin/pets/new"
-            className="inline-flex items-center gap-1.5 bg-hprh-clay text-hprh-paper hover:bg-hprh-clay/95 text-xs font-mono font-bold uppercase tracking-wider px-5 py-3 rounded self-start sm:self-center transition-colors shadow"
+          <Button
+            variant="primary"
+            onClick={() => navigate('/admin/pets/new')}
+            className="inline-flex items-center gap-1.5 self-start sm:self-center"
           >
             <Plus className="w-4 h-4" />
             <span>Add New Pet</span>
-          </Link>
+          </Button>
         </div>
 
         {error && (
@@ -193,7 +194,7 @@ export const AdminPets: React.FC = () => {
         )}
 
         {/* Filter Desk Controls */}
-        <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-4 shadow-sm flex flex-col sm:flex-row items-end gap-4 select-none">
+        <div className="bg-hprh-paper-dark border border-hprh-pine/15 rounded p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row items-end gap-4 select-none">
           <div className="flex-grow w-full sm:w-auto">
             <label className="text-[10px] uppercase font-mono tracking-wider text-hprh-pine/50 font-bold block mb-1">
               Search Inventory
